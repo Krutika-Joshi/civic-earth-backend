@@ -70,4 +70,52 @@ const createReport = async (req, res) => {
     }
 };
 
+
+const getReports = async(req, res) => {
+    try{
+        const { page = 1, limit = 10, status, category, city } = req.query;
+
+        const query = {};
+
+        //role based access
+        if(req.user.role === "citizen") {
+            query.createdBy = req.user.id;
+        }
+
+        //filters
+        if(status) {
+            query.status = status;
+        }
+        if(category) {
+            query.category = category;
+        }
+        if(city) {
+            query.city = city;
+        }
+
+        const reports = await Report.find(query)
+        .sort({ createdAt: -1 }) //latest first
+        .skip((page - 1) * limit)
+        .limit(Number(limt));
+
+        const total = await Report.countDocuments(query);
+
+        res.status(200).json({
+            success: true,
+            total,
+            page: Number(page),
+            reports
+        });
+
+
+
+
+    } catch(error) {
+        res.status(500).json({
+            messgae: "server error",
+            error: error.message
+        });
+    }
+};
+
 module.exports = { createReport };

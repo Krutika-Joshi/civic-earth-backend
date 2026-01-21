@@ -13,7 +13,8 @@ const reportSchema = new mongoose.Schema(
         },
         category: {
             type: String,
-            required: true
+            required: true,
+            enum: ["Garbage", "Water", "Road", "Air", "Noise", "Other"]
         },
         cause: {
             type: String
@@ -58,7 +59,7 @@ const reportSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            enum: ["Pending", "Resolved"],
+            enum: ["pending", "resolved", "verified", "in_progress", "rejected"],
             default: "Pending"
         }
     },
@@ -66,6 +67,13 @@ const reportSchema = new mongoose.Schema(
         timestamps: true
     }
 );
+
+
+reportSchema.index({ status: 1 });
+reportSchema.index({ category: 1 });
+reportSchema.index({ city: 1 });
+reportSchema.index({ createdAt: -1 });
+reportSchema.index({ reportedBy: 1 });
 
 const Report = mongoose.model("Report", reportSchema);
 
