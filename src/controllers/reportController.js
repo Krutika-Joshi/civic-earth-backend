@@ -79,7 +79,7 @@ const getReports = async(req, res) => {
 
         //role based access
         if(req.user.role === "citizen") {
-            query.createdBy = req.user.id;
+            // query.reportedByBy = req.user.id;
         }
 
         //filters
@@ -96,7 +96,7 @@ const getReports = async(req, res) => {
         const reports = await Report.find(query)
         .sort({ createdAt: -1 }) //latest first
         .skip((page - 1) * limit)
-        .limit(Number(limt));
+        .limit(Number(limit));
 
         const total = await Report.countDocuments(query);
 
@@ -118,4 +118,4 @@ const getReports = async(req, res) => {
     }
 };
 
-module.exports = { createReport };
+module.exports = { createReport, getReports };
