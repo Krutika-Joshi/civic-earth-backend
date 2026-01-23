@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Report = require("../models/Report");
 
 const createReport = async (req, res) => {
@@ -118,4 +119,109 @@ const getReports = async(req, res) => {
     }
 };
 
-module.exports = { createReport, getReports };
+
+const getSingleReport = async(req, res) => {
+    try{
+
+        const{id} = req.params;
+
+        if(!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                message: "Invalid report ID"
+            });
+        }
+
+        const report = await Report.findById(id).populate(
+            "reportedBy",
+            "displayName"
+        );
+
+        if(!report) {
+            return res.status(404).json({
+                message: "Report not found"
+            });
+        }
+        res.status(200).json(report);
+
+    } catch(error){
+        res.status(500).json({
+            message: "Server error"
+        });
+    }
+};
+
+const updateReportStatus = async(req, res) => {
+    try {
+
+        const { id } = req.params;
+        const { status, authorityComment } = req.body;
+
+        //role check 
+        if(!["authority", "admin"].includes(req.user.role)) {
+            return res.send(403).json({
+                message: "Access denied"
+            });
+        }
+
+        //validate report id
+        if(!mongoose.Types.ObjectId.isValid(id)) {
+            return res.send(400).json({
+                message: "Invalid report ID"
+            });
+        }
+
+        //fetch report
+        const report = await Report.findById(id);
+
+        if(!report) {
+            return res.send(404).json({
+                message: "Report not found "
+            });
+        }
+
+        //allowed transitions
+        const allowedTransitions = {
+            pending: ["in-progress", "rejected"],
+            "in-progress": ["resolved"],
+        };
+
+        if( !allowedTransitions[report.status] || !allowedTransitions[report.status].includes(status)) {
+            return res.status(400).json({
+                message: `Cannot change status from ${report.status} to ${status}`,
+            });
+        }
+
+        //side effects
+        if(status === "in-progress") {
+            report.assignedAt = new Data();
+        }
+
+        if(status === "resolved") {
+            report.resolvedAt = new Data();
+        }
+
+        if(status === "rejected" && !authorityComment) {
+            return res.status(400).json({
+                message: "Rejection requires a comment"
+            });
+        }
+
+        //update fields
+        report.status = status;
+        report.authorityComment = authorityComment || "";
+
+        await report.save();
+
+        res.status(200).json({
+            message: "Report status updated Successfully",
+            report,
+        });
+
+    } catch(error) {
+        res.send(500).json({
+            message: "Server error"
+        });
+    }
+};
+
+module.exports = { createReport, getReports, getSingleReport };
