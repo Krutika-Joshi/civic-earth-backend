@@ -193,11 +193,11 @@ const updateReportStatus = async(req, res) => {
 
         //side effects
         if(status === "in-progress") {
-            report.assignedAt = new Data();
+            report.assignedAt = new Date();
         }
 
         if(status === "resolved") {
-            report.resolvedAt = new Data();
+            report.resolvedAt = new Date();
         }
 
         if(status === "rejected" && !authorityComment) {
@@ -212,16 +212,17 @@ const updateReportStatus = async(req, res) => {
 
         await report.save();
 
-        res.status(200).json({
+        return res.status(200).json({
             message: "Report status updated Successfully",
             report,
         });
 
     } catch(error) {
+        console.error(error);
         res.send(500).json({
             message: "Server error"
         });
     }
 };
 
-module.exports = { createReport, getReports, getSingleReport };
+module.exports = { createReport, getReports, getSingleReport, updateReportStatus };

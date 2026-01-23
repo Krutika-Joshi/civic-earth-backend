@@ -59,8 +59,18 @@ const reportSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            enum: ["pending", "resolved", "verified", "in_progress", "rejected"],
+            enum: ["pending", "resolved", "verified", "in-progress", "rejected"],
             default: "pending"
+        },
+        assignedAt: {
+            type: Date,
+        },
+
+        resolvedAt: {
+            type: Date,
+        },
+        authorityComment: {
+            type: String,
         }
     },
     {
