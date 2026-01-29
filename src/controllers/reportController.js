@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const Report = require("../models/Report");
+const validateStatusTransition = require("../utils/validateStatusTransition");
 
 const createReport = async (req, res) => {
     try{ 
@@ -158,14 +159,14 @@ const updateReportStatus = async(req, res) => {
 
         //role check 
         if(!["authority", "admin"].includes(req.user.role)) {
-            return res.send(403).json({
+            return res.status(403).json({
                 message: "Access denied"
             });
         }
 
         //validate report id
         if(!mongoose.Types.ObjectId.isValid(id)) {
-            return res.send(400).json({
+            return res.status(400).json({
                 message: "Invalid report ID"
             });
         }
@@ -174,25 +175,21 @@ const updateReportStatus = async(req, res) => {
         const report = await Report.findById(id);
 
         if(!report) {
-            return res.send(404).json({
+            return res.status(404).json({
                 message: "Report not found "
             });
         }
 
-        //allowed transitions
-        const allowedTransitions = {
-            pending: ["in-progress", "rejected"],
-            "in-progress": ["resolved"],
-        };
-
-        if( !allowedTransitions[report.status] || !allowedTransitions[report.status].includes(status)) {
+        // validate transition
+        const isValid = validateStatusTransition(report.status, status);
+        if(!isValid) {
             return res.status(400).json({
                 message: `Cannot change status from ${report.status} to ${status}`,
             });
         }
 
         //side effects
-        if(status === "in-progress") {
+        if(status === "in_progress") {
             report.assignedAt = new Date();
         }
 
@@ -205,6 +202,13 @@ const updateReportStatus = async(req, res) => {
                 message: "Rejection requires a comment"
             });
         }
+
+        //audit trail 
+        report.statusHistory.push({
+            from: report.status,
+            to: status,
+            changedBy: req.user.id,
+        });
 
         //update fields
         report.status = status;
@@ -219,7 +223,7 @@ const updateReportStatus = async(req, res) => {
 
     } catch(error) {
         console.error(error);
-        res.send(500).json({
+        res.status(500).json({
             message: "Server error"
         });
     }

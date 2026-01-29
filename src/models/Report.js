@@ -59,9 +59,23 @@ const reportSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            enum: ["pending", "resolved", "verified", "in-progress", "rejected"],
-            default: "pending"
+            enum: ["submitted", "under_review", "verified", "in_progress", "resolved" ,"rejected"],
+            default: "submitted"
         },
+        statusHistory: [
+            {
+                from: String,
+                to: String,
+                changedBy: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: "User"
+                },
+                changedAt: {
+                    type: Date,
+                    default: Date.now
+                }
+            }
+        ],
         assignedAt: {
             type: Date,
         },
