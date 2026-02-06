@@ -1,6 +1,9 @@
 const mongoose = require("mongoose");
 const Report = require("../models/Report");
 const validateStatusTransition = require("../utils/validateStatusTransition");
+const Authority = require("../models/Authority");
+const decideAuthority = require("../utils/authorityDecider");
+
 
 const createReport = async (req, res) => {
     try{ 
@@ -96,6 +99,7 @@ const getReports = async(req, res) => {
         }
 
         const reports = await Report.find(query)
+        .populate("assignedAuthority", "name type jurisdiction")
         .sort({ createdAt: -1 }) //latest first
         .skip((page - 1) * limit)
         .limit(Number(limit));
@@ -132,10 +136,9 @@ const getSingleReport = async(req, res) => {
             });
         }
 
-        const report = await Report.findById(id).populate(
-            "reportedBy",
-            "displayName"
-        );
+        const report = await Report.findById(id)
+        .populate("reportedBy","displayName")
+        .populate("assignedAuthority", "name typr jurisdiction");
 
         if(!report) {
             return res.status(404).json({
@@ -229,4 +232,88 @@ const updateReportStatus = async(req, res) => {
     }
 };
 
-module.exports = { createReport, getReports, getSingleReport, updateReportStatus };
+const assignAuthority = async (req, res) => {
+    try {
+        const report = await Report.findById(req.params.id);
+        if(!report) {
+            return res.status(404).json({
+                message: "Report not found"
+            });
+        }
+
+        if (report.assignedAuthority) {
+            return res.status(400).json({
+                message: "Authority already assigned to this report"
+            });
+        }
+        if (report.status === "resolved") {
+            return res.status(400).json({
+                message: "Resolved reports cannot be reassigned"
+            });
+        }
+
+        const authorityType = decideAuthority(report);
+        if(!authorityType) {
+            return res.status(400).json({
+                message: "Cannot decide authority"
+            });
+        }
+
+        const authority = await Authority.findOne({
+            type: authorityType,
+            jurisdiction: report.city
+        });
+
+        if(!authority) {
+            return res.status(404).json({
+                message: "No authority found"
+            });
+        }
+
+        report.assignedAuthority = authority._id;
+        report.status = "assigned";
+        await report.save();
+
+        authority.assignedReports.push(report._id);
+        await authority.save();
+
+        res.json({
+            message: "Authority assigned successfully",
+            authority: authority.name
+        });
+    } catch(error) {
+        res.status(500).json({
+            message: "Server Error",
+            error: error.message
+        });
+    }
+};
+
+const manualAssignAuthority = async (req, res) => {
+  const { authorityId } = req.body;
+
+  const report = await Report.findById(req.params.id);
+  if (!report) {
+    return res.status(404).json({ message: "Report not found" });
+  }
+
+  const authority = await Authority.findById(authorityId);
+  if (!authority) {
+    return res.status(404).json({ message: "Authority not found" });
+  }
+
+  report.assignedAuthority = authority._id;
+  report.status = "assigned";
+  await report.save();
+
+  authority.assignedReports.push(report._id);
+  await authority.save();
+
+  res.json({
+    message: "Authority manually assigned",
+    authority: authority.name
+  });
+};
+
+
+module.exports = { createReport, getReports, getSingleReport, updateReportStatus, assignAuthority };

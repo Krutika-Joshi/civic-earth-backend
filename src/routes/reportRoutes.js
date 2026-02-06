@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 
-const protect = require("../middlewares/authMiddleware");
-const { createReport, getReports, getSingleReport, updateReportStatus } = require("../controllers/reportController");
+const { protect, authorizeRoles }  = require("../middlewares/authMiddleware");
+const { createReport, getReports, getSingleReport, updateReportStatus, assignAuthority } = require("../controllers/reportController");
 
 //Create report
 router.post("/", protect, createReport);
@@ -15,5 +15,7 @@ router.get("/:id", protect, getSingleReport);
 
 //update report status
 router.patch("/:id/status", protect, updateReportStatus);
+
+router.post("/:id/assign", protect, authorizeRoles("admin", "moderator"), assignAuthority);
 
 module.exports = router;

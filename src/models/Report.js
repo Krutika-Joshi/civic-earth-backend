@@ -85,6 +85,11 @@ const reportSchema = new mongoose.Schema(
         },
         authorityComment: {
             type: String,
+        },
+        assignedAuthority: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Authority",
+            default: null
         }
     },
     {

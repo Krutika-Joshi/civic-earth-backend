@@ -6,7 +6,7 @@ const app  = require("./app");
 const connectDB = require("./config/db");
 
 
-const port = 8080;
+const port = 5000;
 
 connectDB();
 
