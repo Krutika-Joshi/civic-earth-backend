@@ -2,13 +2,41 @@ const express = require("express");
 const router = express.Router();
 
 const { protect, authorizeRoles }  = require("../middlewares/authMiddleware");
-const { createReport, getReports, getSingleReport, updateReportStatus, assignAuthority } = require("../controllers/reportController");
+const { createReport, 
+        getReports, 
+        getSingleReport, 
+        updateReportStatus, 
+        assignAuthority, 
+        manualAssignAuthority, 
+        getAssignedReportsForAuthority } = require("../controllers/reportController");
+        
+const Authority = require("../models/Authority");
 
 //Create report
 router.post("/", protect, createReport);
 
 //View & filter reports
 router.get("/", protect, getReports);
+
+//get all authorities (admin only)
+router.get("/authorities", protect, authorizeRoles("admin"), 
+async (req, res) => {
+    try{
+        const authorities = await Authority.find({});
+        res.status(200).json(authorities);
+    } catch (error){
+        res.status(500).json({
+            message: "server error",
+            error: error.message
+        });
+    }
+});
+
+// authority dashboard – assigned reports
+router.get("/assigned/me", protect, authorizeRoles("authority"),
+  getAssignedReportsForAuthority
+);
+
 
 //view single report
 router.get("/:id", protect, getSingleReport);
@@ -17,5 +45,10 @@ router.get("/:id", protect, getSingleReport);
 router.patch("/:id/status", protect, updateReportStatus);
 
 router.post("/:id/assign", protect, authorizeRoles("admin", "moderator"), assignAuthority);
+
+//manual assignment
+router.post("/:id/manual-assign", protect, authorizeRoles("admin", "moderator"), manualAssignAuthority);
+
+
 
 module.exports = router;

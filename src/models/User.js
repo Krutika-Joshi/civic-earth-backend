@@ -22,7 +22,7 @@ const userSchema = new mongoose.Schema(
 
         role: {
             type: String,
-            enum: ["citizen", "admin"],
+            enum: ["citizen", "admin", "authority"],
             default: "citizen"
         },
 
@@ -36,6 +36,12 @@ const userSchema = new mongoose.Schema(
             required: true,
             unique: true
         },
+        authorityId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Authority",
+            default: null
+        }
+
     },
 
     {

@@ -14,7 +14,7 @@ const reportSchema = new mongoose.Schema(
         category: {
             type: String,
             required: true,
-            enum: ["Garbage", "Water", "Road", "Air", "Noise", "Other"]
+            enum: ["garbage", "water", "road", "air", "noise", "other"]
         },
         cause: {
             type: String
@@ -59,7 +59,7 @@ const reportSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            enum: ["submitted", "under_review", "verified", "in_progress", "resolved" ,"rejected"],
+            enum: ["submitted","assigned", "in_progress", "resolved" ,"rejected"],
             default: "submitted"
         },
         statusHistory: [

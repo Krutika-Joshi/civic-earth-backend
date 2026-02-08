@@ -58,7 +58,16 @@ const createReport = async (req, res) => {
             longitude,
             media,
             reportedBy: req.user.id,
-            displayName: req.user.displayName || "Anonymous"
+            displayName: req.user.displayName,
+            status: "submitted",
+            statusHistory: [
+                {
+                    from: null,
+                    to: "submitted",
+                    changedBy: req.user.id,
+                    changedAt: new Date()
+                }
+            ]
         });
 
         res.status(201).json({
@@ -260,22 +269,38 @@ const assignAuthority = async (req, res) => {
         }
 
         const authority = await Authority.findOne({
-            type: authorityType,
-            jurisdiction: report.city
+            type: authorityType.toLowerCase(),
+            jurisdiction: report.city.trim()
         });
 
+        console.log("DEBUG → Report category:", report.category);
+        console.log("DEBUG → Decided authority type:", authorityType);
+        console.log("DEBUG → Report city:", report.city);
         if(!authority) {
             return res.status(404).json({
-                message: "No authority found"
+                message: `No authority found for type=${authorityType}, city=${report.city}`
             });
         }
+
+        if (report.status !== "assigned") {
+            report.statusHistory.push({
+                from: report.status,
+                to: "assigned",
+                changedBy: req.user.id,
+                changedAt: new Date()
+            });
+        }
+
 
         report.assignedAuthority = authority._id;
         report.status = "assigned";
         await report.save();
 
-        authority.assignedReports.push(report._id);
-        await authority.save();
+        if (!authority.assignedReports.includes(report._id)){
+            authority.assignedReports.push(report._id);
+            await authority.save();
+        }
+        
 
         res.json({
             message: "Authority assigned successfully",
@@ -291,29 +316,95 @@ const assignAuthority = async (req, res) => {
 
 const manualAssignAuthority = async (req, res) => {
   const { authorityId } = req.body;
+   if (!authorityId) {
+      return res.status(400).json({
+        message: "authorityId is required in request body"
+      });
+    }
 
   const report = await Report.findById(req.params.id);
   if (!report) {
     return res.status(404).json({ message: "Report not found" });
   }
 
-  const authority = await Authority.findById(authorityId);
-  if (!authority) {
-    return res.status(404).json({ message: "Authority not found" });
-  }
+   if (report.assignedAuthority) {
+        return res.status(400).json({
+            message: "Report already has an assigned authority"
+        });
+    }
+
+    if (report.status === "resolved") {
+        return res.status(400).json({
+            message: "Resolved reports cannot be reassigned"
+        });
+    }
+
+    const authority = await Authority.findById(authorityId);
+    if (!authority) {
+        return res.status(404).json({ message: `Authority not found for id=${authorityId}` });
+    }
+
+    if (report.status !== "assigned") {
+        report.statusHistory.push({
+            from: report.status,
+            to: "assigned",
+            changedBy: req.user.id,
+            changedAt: new Date()
+        });
+    }
 
   report.assignedAuthority = authority._id;
   report.status = "assigned";
   await report.save();
 
-  authority.assignedReports.push(report._id);
-  await authority.save();
-
+    if (!authority.assignedReports.includes(report._id)) {
+        authority.assignedReports.push(report._id);
+        await authority.save();
+    }
   res.json({
     message: "Authority manually assigned",
     authority: authority.name
   });
 };
 
+// Authority dashboard – view assigned reports
+const getAssignedReportsForAuthority = async (req, res) => {
+  try {
+    // only authority can access
+    if (req.user.role !== "authority") {
+      return res.status(403).json({
+        message: "Access denied"
+      });
+    }
 
-module.exports = { createReport, getReports, getSingleReport, updateReportStatus, assignAuthority };
+    const reports = await Report.find({
+      assignedAuthority: req.user.authorityId
+    }).sort({ createdAt: -1 });
+
+    
+    // console.log("AUTH USER authorityId:", req.user.authorityId);
+    // console.log("TYPE of authorityId:", typeof req.user.authorityId);
+
+    res.status(200).json({
+      success: true,
+      total: reports.length,
+      reports
+    });
+
+
+  } catch (error) {
+    res.status(500).json({
+      message: "Server error",
+      error: error.message
+    });
+  }
+};
+
+
+module.exports = { createReport, 
+                    getReports, 
+                    getSingleReport, 
+                    updateReportStatus, 
+                    assignAuthority, 
+                    manualAssignAuthority, 
+                    getAssignedReportsForAuthority };

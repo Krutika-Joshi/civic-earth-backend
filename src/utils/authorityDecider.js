@@ -1,8 +1,21 @@
 const decideAuthority = (report) => {
-  if (report.cause === "garbage_dumping") return "municipal";
-  if (report.cause === "water_pollution") return "pollution_board";
-  if (report.cause === "tree_cutting") return "forest";
-  return null;
+  switch (report.category) {
+    case "garbage":
+      return "municipal";
+
+    case "water":
+      return "pollution_board";
+
+    case "tree":
+      return "forest";
+
+    case "air":
+      return "pollution_board";
+
+    default:
+      return null;
+  }
 };
 
 module.exports = decideAuthority;
+

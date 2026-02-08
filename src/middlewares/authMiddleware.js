@@ -1,6 +1,7 @@
+const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 
-const protect = (req, res, next) => {
+const protect = async (req, res, next) => {
     let token;
 
     //check for the token in the header
@@ -22,8 +23,20 @@ const protect = (req, res, next) => {
         //Verify the token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        //Attach user info to request
-        req.user = decoded;
+        const user = await User.findById(decoded.id).select("_id role displayName authorityId");
+
+        if(!user){
+            return res.status(401).json({
+                message: "User not found"
+            });
+        }
+
+        req.user = {
+            id: user._id,
+            role: user.role,
+            displayName: user.displayName,
+            authorityId: user.authorityId
+        };
 
 
         //Continue to next middleware/controller
