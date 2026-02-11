@@ -1,8 +1,7 @@
 const statusTransitions = {
-    submitted: ["under_review", "rejected"],
-    under_review: ["verified", "rejected"],
-    verified: ["in-progress", "rejected"],
-    in_progress: ["resolved"],
+    submitted: ["assigned"],
+    assigned: ["in_progress"],
+    in_progress: ["resolved", "rejected"],
     resolved: [],
     rejected: []
 };

@@ -147,7 +147,7 @@ const getSingleReport = async(req, res) => {
 
         const report = await Report.findById(id)
         .populate("reportedBy","displayName")
-        .populate("assignedAuthority", "name typr jurisdiction");
+        .populate("assignedAuthority", "name type jurisdiction");
 
         if(!report) {
             return res.status(404).json({
@@ -282,7 +282,7 @@ const assignAuthority = async (req, res) => {
             });
         }
 
-        if (report.status !== "assigned") {
+        if (validateStatusTransition(report.status,"assigned")) {
             report.statusHistory.push({
                 from: report.status,
                 to: "assigned",
