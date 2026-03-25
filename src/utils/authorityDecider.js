@@ -6,11 +6,17 @@ const decideAuthority = (report) => {
     case "water":
       return "pollution_board";
 
-    case "tree":
-      return "forest";
+    case "road":
+      return "road";
 
     case "air":
       return "pollution_board";
+
+    case "noise":
+      return "police";
+
+    case "other":
+      return "general";
 
     default:
       return null;
@@ -18,4 +24,3 @@ const decideAuthority = (report) => {
 };
 
 module.exports = decideAuthority;
-

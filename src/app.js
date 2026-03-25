@@ -2,6 +2,9 @@ const express = require("express");
 const authRoutes = require("./routes/authRoutes");
 // const testRoutes = require("./routes/testRoutes");
 const reportRoutes = require("./routes/reportRoutes");
+const cron = require("node-cron");
+const escalateReports = require("./services/escalationService");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 const app = express();
 
@@ -16,5 +19,13 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 // app.use("/api/test", testRoutes);
 app.use("/api/reports", reportRoutes);
+
+app.use("/api/notifications", notificationRoutes);
+
+// Run every 5 minutes
+cron.schedule("*/5 * * * *", async () => {
+    console.log("⏰ Running scheduled escalation check...");
+    await escalateReports();
+});
 
 module.exports = app;

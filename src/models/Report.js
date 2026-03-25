@@ -90,6 +90,13 @@ const reportSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: "Authority",
             default: null
+        },
+        deadline: {
+            type: Date
+        },
+        escalated: {
+            type: Boolean,
+            default: false
         }
     },
     {

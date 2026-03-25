@@ -3,6 +3,9 @@ const Report = require("../models/Report");
 const validateStatusTransition = require("../utils/validateStatusTransition");
 const Authority = require("../models/Authority");
 const decideAuthority = require("../utils/authorityDecider");
+const calculateDeadline = require("../utils/deadlineCalculator");
+const Notification = require("../models/Notification");
+const User = require("../models/User");
 
 
 const createReport = async (req, res) => {
@@ -192,6 +195,17 @@ const updateReportStatus = async(req, res) => {
             });
         }
 
+        //  Restrict authority to only their reports
+        if (
+        req.user.role === "authority" &&
+        (!report.assignedAuthority ||
+            report.assignedAuthority.toString() !== req.user.authorityId.toString())
+        ) {
+        return res.status(403).json({
+            message: "You can only update your assigned reports"
+        });
+        }
+
         // validate transition
         const isValid = validateStatusTransition(report.status, status);
         if(!isValid) {
@@ -294,6 +308,19 @@ const assignAuthority = async (req, res) => {
 
         report.assignedAuthority = authority._id;
         report.status = "assigned";
+        //  Create notification for authority user
+        const authorityUser = await User.findOne({
+        authorityId: authority._id
+        });
+
+        if (authorityUser) {
+        await Notification.create({
+            user: authorityUser._id,
+            message: `New report assigned: ${report.title}`,
+            type: "assignment"
+        });
+        }
+       report.deadline = calculateDeadline(report.category);
         await report.save();
 
         if (!authority.assignedReports.includes(report._id)){
@@ -355,6 +382,7 @@ const manualAssignAuthority = async (req, res) => {
 
   report.assignedAuthority = authority._id;
   report.status = "assigned";
+    report.deadline = calculateDeadline(report.category);
   await report.save();
 
     if (!authority.assignedReports.includes(report._id)) {
@@ -401,10 +429,76 @@ const getAssignedReportsForAuthority = async (req, res) => {
 };
 
 
+const getReportStats = async (req, res) => {
+  try {
+    const stats = await Report.aggregate([
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Convert array to object
+    const result = {
+      totalReports: 0,
+      submitted: 0,
+      assigned: 0,
+      in_progress: 0,
+      resolved: 0,
+      rejected: 0
+    };
+
+    stats.forEach(item => {
+      result[item._id] = item.count;
+      result.totalReports += item.count;
+    });
+
+    res.status(200).json(result);
+
+  } catch (error) {
+    res.status(500).json({
+      message: "Error fetching stats",
+      error: error.message
+    });
+  }
+};
+
+
+const getCategoryStats = async (req, res) => {
+  try {
+    const stats = await Report.aggregate([
+      {
+        $group: {
+          _id: "$category",
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const result = {};
+
+    stats.forEach(item => {
+      result[item._id] = item.count;
+    });
+
+    res.status(200).json(result);
+
+  } catch (error) {
+    res.status(500).json({
+      message: "Error fetching category stats",
+      error: error.message
+    });
+  }
+};
+
 module.exports = { createReport, 
                     getReports, 
                     getSingleReport, 
                     updateReportStatus, 
                     assignAuthority, 
                     manualAssignAuthority, 
-                    getAssignedReportsForAuthority };
+                    getAssignedReportsForAuthority,
+                    getReportStats,
+                    getCategoryStats };

@@ -8,7 +8,9 @@ const { createReport,
         updateReportStatus, 
         assignAuthority, 
         manualAssignAuthority, 
-        getAssignedReportsForAuthority } = require("../controllers/reportController");
+        getAssignedReportsForAuthority,
+        getReportStats,
+        getCategoryStats } = require("../controllers/reportController");
         
 const Authority = require("../models/Authority");
 
@@ -31,6 +33,9 @@ async (req, res) => {
         });
     }
 });
+
+router.get("/stats", getReportStats);
+router.get("/stats/category", getCategoryStats);
 
 // authority dashboard – assigned reports
 router.get("/assigned/me", protect, authorizeRoles("authority"),
